@@ -133,12 +133,83 @@ notes-api$ npm install
 notes-api$ npm run test
 ```
 
+## CI/CD Pipeline Setup
+
+This project includes an automated CI/CD pipeline using AWS CodePipeline, CodeBuild, and GitHub integration for continuous deployment.
+
+### Pipeline Components
+
+- **pipeline.yaml** - CloudFormation template that defines the CI/CD infrastructure:
+  - CodePipeline that orchestrates the build and deployment workflow
+  - CodeBuild project for building and deploying the SAM application
+  - GitHub App Connection for secure repository access
+  - IAM roles with appropriate permissions for CodePipeline and CodeBuild
+
+- **buildspec.yml** - AWS CodeBuild specification file that defines the build process:
+  - Installs Node.js 22 and project dependencies (`npm ci`)
+  - Builds the SAM application (`sam build`)
+  - Deploys to AWS CloudFormation with proper IAM capabilities
+  - Uses dynamic region configuration from the CodePipeline environment
+
+### Deploy the CI/CD Pipeline
+
+1. **Install AWS CLI** - [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) if not already installed
+
+2. **Deploy the pipeline stack**:
+   ```bash
+   aws cloudformation deploy \
+     --template-file pipeline.yaml \
+     --stack-name notes-microservice-pipeline \
+     --parameter-overrides \
+       GitHubRepo=<your-github-username>/notes-microservice-lab-10-10 \
+       GitHubBranch=main \
+     --capabilities CAPABILITY_NAMED_IAM \
+     --region us-east-1
+   ```
+   
+   Replace `<your-github-username>` with your actual GitHub username.
+
+3. **Authorize GitHub Connection**:
+   - Once the CloudFormation stack is created, navigate to the [AWS CodePipeline Console](https://console.aws.amazon.com/codesuite/codepipeline/pipelines)
+   - Look for pending connections in the "Connections" section (left sidebar)
+   - Find the connection named `notes-micro-github`
+   - Click on it and select **"Update pending connection"**
+   - Click the **"Connect"** button to authorize AWS to access your GitHub repository
+   - A GitHub authorization window will open - authorize the connection
+   - Once authorized, the connection status will change to "Available"
+
+4. **Verify Pipeline Execution**:
+   - Return to the CodePipeline console
+   - Your pipeline should now automatically trigger on changes to the main branch
+   - Watch the pipeline progress through Source, Build, and Deploy stages
+   - Check the CodeBuild logs for detailed build output
+
+### Pipeline Workflow
+
+1. **Source Stage**: Triggered when you push changes to the GitHub main branch
+2. **Build Stage**: CodeBuild executes buildspec.yml:
+   - Installs dependencies
+   - Runs `sam build` to package the application
+   - Runs `sam deploy` to deploy to CloudFormation
+3. **Deployment**: SAM automatically:
+   - Creates/updates Lambda functions
+   - Provisions DynamoDB table
+   - Sets up API Gateway endpoints
+
 ## Cleanup
 
 To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
 
 ```bash
 sam delete --stack-name notes-microservice-lab-10-10
+```
+
+To delete the CI/CD pipeline:
+
+```bash
+aws cloudformation delete-stack \
+  --stack-name notes-microservice-pipeline \
+  --region us-east-1
 ```
 
 ## Resources
