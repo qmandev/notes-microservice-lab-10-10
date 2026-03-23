@@ -1,11 +1,19 @@
 # notes-microservice-lab-10-10
 
-This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
+A serverless notes-taking microservice built with AWS Lambda, DynamoDB, and API Gateway. This project provides a complete REST API for creating, reading, updating, and deleting notes with user authentication via custom headers.
 
-- hello-world - Code for the application's Lambda function.
-- events - Invocation events that you can use to invoke the function.
-- hello-world/tests - Unit tests for the application code. 
-- template.yaml - A template that defines the application's AWS resources.
+## Project Structure
+
+- **notes-api/functions** - Lambda functions for notes operations:
+  - `add-note.mjs` - Create a new note (POST /note)
+  - `get-notes.mjs` - Retrieve all notes for a user (GET /notes)
+  - `get-note.mjs` - Retrieve a specific note by ID (GET /note/n/{note_id})
+  - `update-note.mjs` - Update an existing note (PATCH /note)
+  - `delete-note.mjs` - Delete a note (DELETE /note/t/{ts})
+- **notes-api/lib** - Shared utility functions
+- **notes-api/tests** - Unit tests for Lambda functions
+- **events** - Sample invocation events for testing
+- **template.yaml** - SAM template defining AWS resources (Lambda, DynamoDB, API Gateway)
 
 The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
 
@@ -51,7 +59,7 @@ The first command will build the source of your application. The second command 
 
 You can find your API Gateway Endpoint URL in the output values displayed after deployment.
 
-## Use the SAM CLI to build and test locally
+## Build and Test Locally
 
 Build your application with the `sam build` command.
 
@@ -59,32 +67,45 @@ Build your application with the `sam build` command.
 notes-microservice-lab-10-10$ sam build
 ```
 
-The SAM CLI installs dependencies defined in `hello-world/package.json`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
+The SAM CLI installs dependencies defined in `notes-api/package.json`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
 
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
+Test a single function by invoking it directly with a test event. Test events are included in the `events` folder in this project.
 
 Run functions locally and invoke them with the `sam local invoke` command.
 
 ```bash
-notes-microservice-lab-10-10$ sam local invoke HelloWorldFunction --event events/event.json
+notes-microservice-lab-10-10$ sam local invoke AddNoteFunction --event events/event.json
 ```
 
 The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
 
 ```bash
 notes-microservice-lab-10-10$ sam local start-api
-notes-microservice-lab-10-10$ curl http://localhost:3000/
 ```
 
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
+## API Endpoints
 
-```yaml
-      Events:
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
+The Notes API provides the following endpoints (all require `App-User-Id` and `App-User-Name` headers):
+
+- `POST /note` - Create a new note
+- `GET /notes` - Retrieve all notes for the authenticated user
+- `GET /note/n/{note_id}` - Retrieve a specific note
+- `PATCH /note` - Update an existing note
+- `DELETE /note/t/{ts}` - Delete a note by timestamp
+
+Example requests with curl:
+```bash
+# Create a note
+curl -X POST http://localhost:3000/note \
+  -H "App-User-Id: user123" \
+  -H "App-User-Name: John Doe" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"My Note","content":"Note content"}'
+
+# Get all notes
+curl http://localhost:3000/notes \
+  -H "App-User-Id: user123" \
+  -H "App-User-Name: John Doe"
 ```
 
 ## Add a resource to your application
@@ -97,19 +118,19 @@ To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs`
 `NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
 
 ```bash
-notes-microservice-lab-10-10$ sam logs -n HelloWorldFunction --stack-name notes-microservice-lab-10-10 --tail
+notes-microservice-lab-10-10$ sam logs -n AddNoteFunction --stack-name notes-microservice-lab-10-10 --tail
 ```
 
 You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
 
 ## Unit tests
 
-Tests are defined in the `hello-world/tests` folder in this project. Use NPM to install the [Mocha test framework](https://mochajs.org/) and run unit tests.
+Tests are defined in the `notes-api/tests` folder in this project. Use NPM to install the [Mocha test framework](https://mochajs.org/) and run unit tests.
 
 ```bash
-notes-microservice-lab-10-10$ cd hello-world
-hello-world$ npm install
-hello-world$ npm run test
+notes-microservice-lab-10-10$ cd notes-api
+notes-api$ npm install
+notes-api$ npm run test
 ```
 
 ## Cleanup
